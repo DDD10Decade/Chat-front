@@ -1,13 +1,15 @@
 <template>
-    <nav>
-        <router-link to="/">Home</router-link>
-        |
-        <router-link to="/about">About</router-link>
-        |
-        <router-link to="/login">Login</router-link>
-        |
-        <router-link to="/chat">Chat</router-link>
-    </nav>
+  <!--    <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal" @select="handleSelect">-->
+  <!--        <nav>-->
+  <!--            <router-link to="/">Home</router-link>-->
+  <!--            |-->
+  <!--            <router-link to="/about">About</router-link>-->
+  <!--            |-->
+  <!--            <router-link to="/login">Login</router-link>-->
+  <!--            |-->
+  <!--            <router-link to="/chat">Chat</router-link>-->
+  <!--        </nav>-->
+  <!--    </el-menu>-->
     <router-view/>
 </template>
 
@@ -31,6 +33,10 @@ nav a {
 
 nav a.router-link-exact-active {
     color: #42b983;
+}
+
+router-view {
+    flex: 1;
 }
 </style>
 <script setup>
