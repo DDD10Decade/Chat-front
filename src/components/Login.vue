@@ -15,7 +15,8 @@
                 </el-container>
                 <el-container>
                     <div class="input">
-                        <el-button @click="login" style="width: 500px;text-align: center" type="primary" :disabled="disabled">
+                        <el-button @click="login" style="width: 500px;text-align: center" type="primary"
+                                   :disabled="disabled">
                             登录
                         </el-button>
                     </div>
@@ -42,19 +43,18 @@ export default {
     },
     methods: {
         login() {
-            // 该方法用于将用户注册时输入的姓名和密码数据存储到本地存储中，
-            // 并分配一个名为  "registUserInfo"  的键来标识该数据。
-            Storage.commit("registUserInfo", {
+            let newUser = {
                 name: this.name,
                 password: this.password
-            })
+            }
+            Storage.commit("registUserInfo", newUser)
             ElMessage({//使用了组件  ElMessage  来在页面上显示一个消息提示框。
                 message: '登录成功',
                 type: 'success',
                 duration: 3000
             })
             setTimeout(() => {
-                this.$router.push({name: 'chat'})
+                this.$router.push({name: 'chat', params: {name: newUser.name}})
             }, 3000);
         },
     },
