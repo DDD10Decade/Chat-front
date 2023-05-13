@@ -14,8 +14,11 @@
                         <!--聊天内容-->
                         <div class="chat-wrapper">
                             <div v-for="message in Chat_Messages" :key="message.id" class="message-item">
+                                <span>{{ message.time }}--</span>
+                                <span style="color: blue;text-align: right">{{ message.name }}</span>
                                 <div class="message-bubble"
                                      :class="[message.isMyMessage ? 'my-message' : 'other-message']">
+
                                     <div class="message-content">{{ message.content }}</div>
                                 </div>
                             </div>
@@ -30,12 +33,11 @@
                             </div>
                             <div>
                                 <el-button type="primary" style="float: right;height: 100%"
-                                           @click="sendMessage">
+                                           @click="sendMessage()">
                                     发送
                                 </el-button>
                             </div>
                         </el-container>
-
                     </el-footer>
                 </div>
             </el-container>
@@ -45,6 +47,9 @@
 <script>
 import E from 'wangeditor';
 import io from 'socket.io-client';
+import {useRoute} from "vue-router";
+
+const Socket = io('http://127.0.0.1:5000', {autoConnect: true});
 
 
 export default {
@@ -52,12 +57,18 @@ export default {
     props: {
         chat_messages: {
             type: Array,
-            default: () => []
-        }
+        },
+        // UserName: String,
     },
-
+    // setup() {
+    //     const R = useRoute();
+    //     const UserName = R.params.name;
+    //     return {UserName};
+    // },
     data() {
+        const UserR = useRoute();
         return {
+            UserName: UserR.params.name,
             Chat_Messages: [], // 初始化为一个空数组
             user_List: [],
             chatText: '',
@@ -65,41 +76,44 @@ export default {
             editorContent: '',
         };
     },
-    // 监听后端发送的更新事件，接收到更新事件时更新数据
-    created() {
-        const socket = io('http://localhost:5000');
-        socket.on('new-message', (message) => {
-            const Recv_Message = {
-                id: Date.now().toString(),
-                content: message,
-                isMyMessage: false,
-                timestamp: Date.now()
-            };
-            this.messages.push(Recv_Message)
+    created() {// 监听后端发送的更新事件，接收到更新事件时更新数据
+        Socket.on('NewMessage', (data) => {
+            if (data.sendName !== this.UserName) {
+                const Recv_Message = {
+                    name: data.sendName,
+                    time: data.sendTime,
+                    id: Date.now().toString(),
+                    content: data.content,
+                    isMyMessage: false,
+                };
+                this.Chat_Messages.push(Recv_Message)
+            }
         });
-        socket.on('user_List', (online) => {
+        Socket.on('user_List', (online) => {
             this.user_List = online
         });
     },
     components: {},
+    socket: {},
     methods: {
-        goBack() {
-            this.$router.push("/")
-        },
+        // goBack() {
+        //     this.$route.push("/")
+        // },
         contentChange(html) {
             this.editorContent = html;
             this.$emit('contentChange', this.editorContent);
         },
         sendMessage() {
             var newMessage = {
+                name: this.UserName,
                 id: Date.now().toString(),
-                content: this.editor.txt.html(), //this.newMessageContent.trim(),
+                content: this.editor.txt.html(),
                 isMyMessage: true,
-                timestamp: Date.now()
-            }
+            };
             this.Chat_Messages.push(newMessage)
-            this.socket.emit('new-message', {
-                content: newMessage.content
+            Socket.emit("NewMessage", {
+                content: newMessage.content,
+                name: newMessage.name
             })
         },
     },
@@ -122,9 +136,9 @@ export default {
     },
     beforeUnmount() {
         // 在组件销毁前关闭Socket.IO连接
-        if (this.socket !== null) {
-            this.socket.disconnect();
-            this.socket = null;
+        if (Socket !== null) {
+            Socket.disconnect();
+            // this.socket = null;
         }
     },
 }
