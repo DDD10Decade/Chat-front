@@ -1,8 +1,9 @@
 <template>
     <div style="padding: 100px" id="container">
-        <el-col :span="10" style="margin: auto;padding-top: 15vh">
+        <el-col :span="10" style="margin: auto;padding-top: 10vh">
             <el-card :body-style="{ padding: '0px' }">
-                <el-container style="width: 100%">
+                <el-image :src="require('../assets/title2.png')" class="title"></el-image>
+                <el-container style="width: 100%;padding-top: 0">
                     <div class="input">
                         <el-input v-model="name" prefix-icon="el-icon-user" placeholder="请输入用户名"></el-input>
                     </div>
@@ -69,13 +70,13 @@ export default {
     position: absolute;
 }
 
-#title {
+.title {
     text-align: center;
-    color: azure;
-    margin-top: 200px;
+    padding: 0;
 }
 
 .input {
+    padding-top: 0;
     margin: 20px auto;
     width: 500px;
 }

@@ -1,18 +1,33 @@
 <template>
     <div id="Chatbase">
         <el-container style="height: 100vh;">
-            <el-header><h1>在线聊天室</h1></el-header>
+            <el-header height="10vh" style="width: 100vw">
+                    <el-menu class="el-menu--vertical" mode="horizontal" :ellipsis="false" id="menu">
+                        <el-menu-item @click="goBack">
+                            <el-icon>
+                                <DArrowLeft/>
+                            </el-icon>
+                            退出聊天室
+                        </el-menu-item>
+                        <el-menu-item>
+                            <el-image :src="logo" v-if="this.logo" :fit="'cover'"
+                                      style="height: 8vh;align-self: auto"></el-image>
+                            在线聊天室
+                        </el-menu-item>
+                    </el-menu>
+            </el-header>
             <el-container style="height: 80vh;">
-                <el-aside width="200px" style="height: 100%;">
+                <el-aside width="20vw" style="height: 100%;">
                     <!--在线用户列表-->
                     <div class="onlineTable">
-                        <el-table :data="onlineList" :max-height="tableHeight" height="calc(100%-10rem)" width="100%">
+                        <el-table :data="onlineList" :key="this.itemKey"
+                                  :max-height="tableHeight" height="calc(100%-10rem)" width="100%">
                             <el-table-column prop="name" label="在线用户" fixed="left"></el-table-column>
                         </el-table>
                     </div>
                 </el-aside>
-                <div style="height: 100vh;width: 100vh">
-                    <el-main style="width: 100vh;height: 65vh;">
+                <div style="height: 100%;width: 80vw">
+                    <el-main style="width: 100%;height: 60vh;">
                         <!--聊天内容-->
                         <div class="chat-wrapper">
                             <div v-for="message in Chat_Messages" :key="message.id" class="message-item">
@@ -21,22 +36,20 @@
                                      :class="[message.isMyMessage ? 'my-message' : 'other-message']">
                                     <span style="color: blue">{{ message.name }}</span>
                                     <div class="message-content">
-                                        <!--                                        {{ message.content }}-->
                                         <div v-html="message.content"></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </el-main>
-                    <el-footer style="width: 100vh;height: 30vh">
-                        <el-container>
-                            <div id="wangeditor" style="height: 100%;width: 100%">
-                                <div ref="editorElem" style="text-align: left;height: 100%"
-                                     class="textInput">
+                    <el-footer style="width: 80vw;height: 20vh">
+                        <el-container style="width: 100%">
+                            <div id="wangeditor" style="">
+                                <div ref="editorElem" class="textInput">
                                 </div>
                             </div>
-                            <div>
-                                <el-button type="primary" style="float: right;height: 100%"
+                            <div style="width: 10%;float: right;padding: 0">
+                                <el-button type="primary" style="float: left;height: 100%;width: 100%"
                                            @click="sendMessage()">
                                     发送
                                 </el-button>
@@ -53,11 +66,14 @@ import E from 'wangeditor';
 import io from 'socket.io-client';
 import {useRoute} from "vue-router";
 import {ElMessage} from "element-plus";
+import Storage from "@/tools/Storage";
+
 
 const Socket = io('http://127.0.0.1:5000', {autoConnect: true});
 
 
 export default {
+    computed: {},
     props: {
         chat_messages: {
             type: Array,
@@ -73,6 +89,10 @@ export default {
             editor: null,
             editorContent: '',
             tableHeight: 600,
+            itemKey: 0,
+            logo: require("../assets/logo.png"),
+            title1: require("../assets/title2.png"),
+            title2: require("../assets/title2.png"),
         };
     },
     created() {// 监听后端发送的更新事件，接收到更新事件时更新数据
@@ -93,10 +113,11 @@ export default {
         Socket.on("OtherLeave", (Other) => {
             var dict;
             for (dict in this.onlineList) {
-                if (dict[name] === Other.name) {
+                if (dict.name === Other.name) {
                     this.onlineList.splice(dict, 1)
                 }
             }
+            this.itemKey = Math.random()
             ElMessage({
                 message: Other.name + '离开聊天室',
                 type: 'warning',
@@ -114,6 +135,7 @@ export default {
                 };
                 this.onlineList.push(NewUser);
             }
+            this.itemKey = Math.random()
             ElMessage({
                 message: List[i] + '登录成功',
                 type: 'success',
@@ -124,23 +146,20 @@ export default {
     components: {},
     socket: {},
     methods: {
-        // goBack() {
-        //     this.$route.push("/")
-        // },
+        goBack() {
+            Socket.emit("leave", {"name": this.UserName});
+            Storage.commit("clearUserInfo");
+            Socket.disconnect();
+            this.$router.push({name: 'login'})
+        },
         contentChange(html) {
             this.editorContent = html;
             this.$emit('contentChange', this.editorContent);
         },
         sendMessage() {
-            var newMessage = {
-                name: this.UserName,
-                id: Date.now().toString(),
-                content: this.editor.txt.html(),
-                isMyMessage: true,
-            };
             Socket.emit("NewMessage", {
-                content: newMessage.content,
-                name: newMessage.name
+                content: this.editor.txt.html(),
+                name: this.UserName,
             });
         },
         getTableMaxHeight() {//获取容器当前高度，重设表格的最大高度
@@ -151,7 +170,9 @@ export default {
             })
         },
     },
-    watch: {},
+    beforeRouteLeave() {
+        Socket.emit("leave", {"name": this.UserName});
+    },
     mounted() {
         Socket.emit('updateList', {"name": this.UserName});
         this.editor = new E(this.$refs.editorElem);
@@ -160,7 +181,6 @@ export default {
         this.editor.config.menus = [
             //菜单配置
             'emoticon',
-            'image',
             'strikeThrough',
             'foreColor',
             'undo',
@@ -176,13 +196,14 @@ export default {
         }
     },
     beforeUnmount() {
+        Socket.emit("leave", {name: this.UserName});
         // 在组件销毁前关闭Socket.IO连接
         if (Socket !== null) {
-            Socket.emit("OtherLeave", {name: this.UserName});
             Socket.disconnect();
-            // this.socket = null;
+            this.Socket = null;
         }
     },
+
 }
 </script>
 <style>
@@ -196,6 +217,20 @@ export default {
     flex: 1;
     z-index: -1;
 }
+el-menu-item{
+    tab-size: 40px;
+}
+#menu {
+    background: url("../assets/title1.png") no-repeat 50% 50%;
+    z-index: 9999;
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    max-width: 100%;
+    max-height: 100%;
+    align-self: flex-start;
+    margin: auto;
+}
 
 el-main {
     background-color: white;
@@ -207,11 +242,14 @@ el-table {
     min-height: 70vh;
 }
 
+
 #wangeditor {
     padding: 0;
     max-height: 25vh;
     min-width: 80vh;
-    float: left;
+    float: right;
+    height: 100%;
+    width: 80%;
 }
 
 #wangeditor div {
@@ -230,12 +268,15 @@ el-table {
     max-height: 20vh;
     min-width: 70vh;
     width: 100%;
+    text-align: left;
+    height: 100%;
 }
 
 .chat-wrapper {
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
     overflow-y: auto;
     padding: 10px;
 }
@@ -257,13 +298,13 @@ el-table {
     word-wrap: break-word;
 }
 
-.my-message {
+.other-message {
     background-color: #DCF8C6;
     align-self: flex-end;
     text-align: right;
 }
 
-.other-message {
+.my-message {
     background-color: #ffffff;
     align-self: flex-start;
     text-align: left;
